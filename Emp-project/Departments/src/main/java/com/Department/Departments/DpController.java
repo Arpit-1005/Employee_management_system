@@ -1,66 +1,45 @@
 package com.Department.Departments;
 
-//import java.net.http.HttpRequest;
-import java.util.ArrayList;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
-//import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-//import org.springframework.web.client.HttpClientErrorException;
-//import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
-
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-
-import org.springframework.web.bind.annotation.PutMapping;
-
 
 @RestController
 public class DpController {
+
     @Autowired
     private RestTemplate restTemplate;
 
-    @GetMapping("/Employee")
-    @CircuitBreaker(name = "EmployeeCircuitBreaker", fallbackMethod = "EmployeeFallback")
+    private final String backendUrl = "http://localhost:9090/em";
 
+    // Get all employees
+    @GetMapping("/Employee")
     public List<Employee> getEmployees() {
         ResponseEntity<List<Employee>> response = restTemplate.exchange(
-            "http://localhost:9090/em",
+            backendUrl,
             HttpMethod.GET,
             null,
             new ParameterizedTypeReference<List<Employee>>() {}
         );
         return response.getBody();
-    } 
-    public List<Employee> EmployeeFallback(final Throwable t) {
-        System.out.println("Inside fallback method, exception - " + t.getMessage());
-        return new ArrayList<>();
-    }
-    @PostMapping("/Employee")
-    public Employee addEmployee(@RequestBody Employee employee) {
-        ResponseEntity<Employee> response = restTemplate.exchange(
-            "http://localhost:9090/em",
-            HttpMethod.POST,
-            new HttpEntity<Employee>(employee),
-            Employee.class
-        );
-        return response.getBody();
     }
 
+    // Get single employee by id
     @GetMapping("/Employee/{id}")
     public Employee getEmployee(@PathVariable Long id) {
         ResponseEntity<Employee> response = restTemplate.exchange(
-            "http://localhost:9090/em/" + id,
+            backendUrl + "/" + id,
             HttpMethod.GET,
             null,
             Employee.class
@@ -68,24 +47,38 @@ public class DpController {
         return response.getBody();
     }
 
+    // Add new employee
+    @PostMapping("/Employee")
+    public String addEmployee(@RequestBody Employee employee) {
+        ResponseEntity<String> response = restTemplate.postForEntity(
+            backendUrl,
+            employee,
+            String.class
+        );
+        return response.getBody();
+    }
+
+    // Update employee
+    @PutMapping("/Employee/{id}")
+    public String updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
+        ResponseEntity<String> response = restTemplate.exchange(
+            backendUrl + "/" + id,
+            HttpMethod.PUT,
+            new HttpEntity<>(employee),
+            String.class
+        );
+        return response.getBody();
+    }
+
+    // Delete employee
     @DeleteMapping("/Employee/{id}")
-    public void deleteEmployee(@PathVariable Long id) {
-        restTemplate.exchange(
-            "http://localhost:9090/em/" + id,
+    public String deleteEmployee(@PathVariable Long id) {
+        ResponseEntity<String> response = restTemplate.exchange(
+            backendUrl + "/" + id,
             HttpMethod.DELETE,
             null,
-            Void.class
+            String.class
         );
+        return response.getBody();
     }
-
-    @PutMapping("/Employee/{id}")
-    public void updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
-        restTemplate.exchange(
-            "http://localhost:9090/em/" + id,
-            HttpMethod.PUT,
-            new HttpEntity<Employee>(employee),
-            Void.class
-        );
-    }
-
 }
